@@ -1,0 +1,33 @@
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+secrets/*
+!secrets/*.example
+*.pem
+*.key
+*.crt
+
+# Nextcloud, PostgreSQL, Redis, and transcoder runtime data
+/nextcloud/
+data/
+tmp/
+
+# Local Ansible inventory and variables
+/.ansible/
+ansible/inventory.yml
+ansible/vars.yml
+ansible/.vault-password
+ansible/*.retry
+
+# Local tooling metadata
+.agents/
+.codex/
+
+# Runtime and editor output
+*.log
+*.swp
+*.swo
+.DS_Store
+.idea/
+.vscode/
