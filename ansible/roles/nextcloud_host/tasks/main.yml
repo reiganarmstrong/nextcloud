@@ -1,0 +1,104 @@
+---
+- name: Validate the target host
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.os_family == "Debian"
+      - ansible_facts.service_mgr == "systemd"
+      - nextcloud_host_compose_dir is match('^/[A-Za-z0-9_./@+-]+$')
+      - nextcloud_host_docker_timeout is match('^[0-9]+(s|min|h)$')
+      - nextcloud_host_guard_timeout is match('^[0-9]+(s|min|h)$')
+    fail_msg: >-
+      This role supports Debian-family systemd hosts and requires absolute,
+      shell-safe paths and valid systemd time spans.
+
+- name: Inspect required deployment paths and devices
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ nextcloud_host_compose_dir }}/compose.yaml"
+    - /dev/dri/renderD128
+  register: nextcloud_host_required_paths
+
+- name: Require the Compose file and Intel render device
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+    fail_msg: "Required path is unavailable: {{ item.item }}"
+  loop: "{{ nextcloud_host_required_paths.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Verify Docker Compose is installed
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/docker
+      - compose
+      - version
+  changed_when: false
+
+- name: Validate the Compose model without creating containers
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/docker
+      - compose
+      - --project-directory
+      - "{{ nextcloud_host_compose_dir }}"
+      - config
+      - --quiet
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Create local runtime directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  loop: "{{ nextcloud_host_runtime_directories }}"
+  when: nextcloud_host_manage_runtime_directories | bool
+
+- name: Create the Docker systemd override directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/docker.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Allow enough time for all containers to stop cleanly
+  ansible.builtin.template:
+    src: docker-timeout.conf.j2
+    dest: /etc/systemd/system/docker.service.d/90-graceful-container-shutdown.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Install the Nextcloud shutdown guard
+  ansible.builtin.template:
+    src: nextcloud-shutdown.service.j2
+    dest: /etc/systemd/system/nextcloud-shutdown.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Apply systemd unit changes
+  ansible.builtin.meta: flush_handlers
+
+- name: Verify the installed systemd configuration
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/systemd-analyze
+      - verify
+      - /etc/systemd/system/nextcloud-shutdown.service
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Arm the shutdown guard without starting Compose
+  ansible.builtin.systemd_service:
+    name: nextcloud-shutdown.service
+    enabled: "{{ nextcloud_host_enable_shutdown_guard }}"
+    state: "{{ 'started' if nextcloud_host_enable_shutdown_guard else 'stopped' }}"
+  when: not ansible_check_mode

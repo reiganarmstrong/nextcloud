@@ -1,0 +1,164 @@
+name: ${COMPOSE_PROJECT_NAME:-nextcloud}
+
+x-nextcloud-environment: &nextcloud-environment
+  TZ: ${TZ:-Etc/UTC}
+  POSTGRES_HOST: database
+  POSTGRES_DB: nextcloud
+  POSTGRES_USER: nextcloud
+  POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+  REDIS_HOST: redis
+  NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USER:-admin}
+  NEXTCLOUD_ADMIN_PASSWORD_FILE: /run/secrets/nextcloud_admin_password
+  NEXTCLOUD_TRUSTED_DOMAINS: ${NEXTCLOUD_HOSTNAME:-pc} app localhost 127.0.0.1
+  NEXTCLOUD_INIT_HTACCESS: "true"
+  OVERWRITECLIURL: http://${NEXTCLOUD_HOSTNAME:-pc}:${NEXTCLOUD_PORT:-8080}
+  PHP_MEMORY_LIMIT: 2G
+  PHP_UPLOAD_LIMIT: 16G
+  APACHE_BODY_LIMIT: "17179869184"
+
+x-nextcloud-common: &nextcloud-common
+  image: nextcloud:${NEXTCLOUD_VERSION:-33.0.6-apache}
+  restart: unless-stopped
+  init: true
+  environment: *nextcloud-environment
+  secrets:
+    - postgres_password
+    - nextcloud_admin_password
+  volumes:
+    - ${NEXTCLOUD_DATA_LOCATION:-./nextcloud}:/var/www/html
+    - ./config/php/nextcloud.ini:/usr/local/etc/php/conf.d/zz-nextcloud.ini:ro
+    - /etc/localtime:/etc/localtime:ro
+  networks:
+    - frontend
+    - backend
+  stop_grace_period: 10m
+
+services:
+  database:
+    image: postgres:${POSTGRES_VERSION:-17-alpine}
+    restart: unless-stopped
+    init: true
+    environment:
+      TZ: ${TZ:-Etc/UTC}
+      POSTGRES_DB: nextcloud
+      POSTGRES_USER: nextcloud
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_INITDB_ARGS: --data-checksums
+    command:
+      - postgres
+      - -c
+      - shared_buffers=${POSTGRES_SHARED_BUFFERS:-1GB}
+      - -c
+      - effective_cache_size=${POSTGRES_EFFECTIVE_CACHE_SIZE:-4GB}
+      - -c
+      - maintenance_work_mem=${POSTGRES_MAINTENANCE_WORK_MEM:-512MB}
+      - -c
+      - work_mem=${POSTGRES_WORK_MEM:-16MB}
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - effective_io_concurrency=200
+      - -c
+      - checkpoint_completion_target=0.9
+      - -c
+      - checkpoint_timeout=15min
+      - -c
+      - max_wal_size=4GB
+    secrets:
+      - postgres_password
+    volumes:
+      - ${POSTGRES_DATA_LOCATION:-./data/postgres}:/var/lib/postgresql/data
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nextcloud -d nextcloud"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    shm_size: 1gb
+    stop_grace_period: 5m
+
+  redis:
+    image: redis:${REDIS_VERSION:-8-alpine}
+    restart: unless-stopped
+    init: true
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - ${REDIS_DATA_LOCATION:-./data/redis}:/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    stop_grace_period: 2m
+
+  app:
+    <<: *nextcloud-common
+    ports:
+      - ${NEXTCLOUD_BIND_ADDRESS:-0.0.0.0}:${NEXTCLOUD_PORT:-8080}:80
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    tmpfs:
+      - /tmp:size=4G,mode=1777,exec
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://127.0.0.1/status.php | grep --quiet '\"installed\":true'"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 5m
+
+  cron:
+    <<: *nextcloud-common
+    entrypoint: /cron.sh
+    depends_on:
+      app:
+        condition: service_healthy
+    ports: []
+    healthcheck:
+      disable: true
+    tmpfs:
+      - /tmp:size=4G,mode=1777,exec
+
+  # Recommended Docker arrangement for Memories. The Arc A750 performs VA-API
+  # video decode/encode here while Nextcloud remains hardware-agnostic.
+  go-vod:
+    image: radialapps/go-vod:${GO_VOD_VERSION:-latest}
+    restart: unless-stopped
+    init: true
+    user: "33:33"
+    working_dir: /tmp
+    group_add:
+      - ${RENDER_GID:-991}
+    environment:
+      NEXTCLOUD_HOST: http://app
+      NEXTCLOUD_ALLOW_INSECURE: "1"
+    devices:
+      - /dev/dri:/dev/dri
+    volumes:
+      - ${NEXTCLOUD_DATA_LOCATION:-./nextcloud}:/var/www/html:ro
+    tmpfs:
+      - /tmp:size=8G,mode=1777,uid=33,gid=33,exec
+    networks:
+      - backend
+    depends_on:
+      app:
+        condition: service_healthy
+    stop_grace_period: 10m
+
+networks:
+  frontend:
+  backend:
+    internal: true
+
+secrets:
+  postgres_password:
+    file: ${POSTGRES_PASSWORD_FILE:-./secrets/postgres_password}
+  nextcloud_admin_password:
+    file: ${NEXTCLOUD_ADMIN_PASSWORD_FILE:-./secrets/nextcloud_admin_password}

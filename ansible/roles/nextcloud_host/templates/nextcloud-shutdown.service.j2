@@ -1,0 +1,15 @@
+[Unit]
+Description=Gracefully stop the Nextcloud Compose stack before Docker
+Requires=docker.service
+After=docker.service network-online.target
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/true
+ExecStop=/usr/bin/docker compose --project-directory {{ nextcloud_host_compose_dir }} stop
+TimeoutStopSec={{ nextcloud_host_guard_timeout }}
+
+[Install]
+WantedBy=multi-user.target

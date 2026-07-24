@@ -1,0 +1,12 @@
+---
+all:
+  children:
+    nextcloud_hosts:
+      hosts:
+        pc:
+          ansible_connection: local
+          ansible_host: localhost
+          ansible_python_interpreter: /usr/bin/python3
+          # Ubuntu 26.04 defaults to sudo-rs; this host also provides classic
+          # sudo as /usr/bin/sudo.ws for Ansible's prompt handling.
+          ansible_become_exe: /usr/bin/sudo.ws

@@ -1,0 +1,11 @@
+---
+nextcloud_host_compose_dir: /srv/nextcloud
+nextcloud_host_enable_shutdown_guard: true
+nextcloud_host_manage_runtime_directories: true
+nextcloud_host_docker_timeout: 20min
+nextcloud_host_guard_timeout: 18min
+
+nextcloud_host_runtime_directories:
+  - "{{ nextcloud_host_compose_dir }}/nextcloud"
+  - "{{ nextcloud_host_compose_dir }}/data/postgres"
+  - "{{ nextcloud_host_compose_dir }}/data/redis"

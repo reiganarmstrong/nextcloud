@@ -1,0 +1,11 @@
+---
+# Copy to vars.yml. The real file is ignored even though these defaults contain
+# no secrets, because it represents host-specific deployment state.
+nextcloud_host_compose_dir: /srv/nextcloud
+nextcloud_host_enable_shutdown_guard: true
+nextcloud_host_manage_runtime_directories: true
+
+# Docker must outlive Compose's 10-minute service stop periods. This setting is
+# shared by all containers on the host and also accommodates the Immich stack.
+nextcloud_host_docker_timeout: 20min
+nextcloud_host_guard_timeout: 18min
