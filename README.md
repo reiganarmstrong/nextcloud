@@ -18,10 +18,9 @@ automation are included. Nothing in this repository was applied to the host.
 | `redis` | Distributed cache and transactional file locking | Persistent local cache |
 | `go-vod` | Memories external video transcoder | Arc A750 through VA-API at `/dev/dri` |
 
-The app is published as `http://pc:8080` for Tailscale MagicDNS. Traffic inside
-the tailnet is encrypted by Tailscale, but the HTTP port also listens on the
-LAN by default. To make it tailnet-only, set `NEXTCLOUD_BIND_ADDRESS` in `.env`
-to the output of `tailscale ip -4`. Do not forward port 8080 on the router.
+The app listens only on `127.0.0.1:8080`; Tailscale Serve terminates TLS and
+publishes it privately to the tailnet as `https://pc.<tailnet>.ts.net`. Do not
+forward port 8080 on the router and do not enable Tailscale Funnel.
 
 ## Repository layout
 
@@ -77,7 +76,8 @@ No command in this section has been run while constructing the repository.
    docker compose up -d
    ```
 
-4. Open `http://pc:8080` from a tailnet device and sign in with the username
+4. Open the HTTPS URL shown by `tailscale serve status` from a tailnet device
+   and sign in with the username
    in `.env` and password in `secrets/nextcloud_admin_password`.
 5. Install and configure Memories, Preview Generator, and Recognize:
 

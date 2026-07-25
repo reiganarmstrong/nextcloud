@@ -35,9 +35,10 @@ $EDITOR .env
 ./scripts/preflight.sh
 ```
 
-For access only over Tailscale, put the stable address from `tailscale ip -4`
-in `NEXTCLOUD_BIND_ADDRESS`. The MagicDNS hostname remains `pc`, so clients use
-`http://pc:8080`.
+Set `NEXTCLOUD_HOSTNAME`, `NEXTCLOUD_OVERWRITE_HOST`, and
+`NEXTCLOUD_OVERWRITE_CLI_URL` to the node's full `*.ts.net` DNS name. Keep
+`NEXTCLOUD_BIND_ADDRESS=127.0.0.1` so the cleartext backend cannot bypass
+Tailscale Serve.
 
 The data path is fixed after first installation. Do not change
 `NEXTCLOUD_DATA_LOCATION` later without a planned migration.
@@ -54,7 +55,9 @@ docker compose pull
 docker compose up -d
 docker compose ps
 docker compose logs --tail=100 app database redis
-curl --fail http://pc:8080/status.php
+sudo tailscale serve --bg --https=443 http://127.0.0.1:8080
+tailscale serve status
+curl --fail https://pc.your-tailnet.ts.net/status.php
 ```
 
 Then run `./scripts/configure-apps.sh`. The script downloads local-only app

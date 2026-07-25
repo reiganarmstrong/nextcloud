@@ -31,11 +31,11 @@ internal Docker network and cannot be reached directly from the LAN. The app
 also joins a frontend network so it can reach the Nextcloud app store and
 connectivity checks.
 
-Direct HTTP is acceptable only because the stated access path is an encrypted
-Tailscale tunnel. Use a Tailscale IP bind for a strict tailnet-only listener.
-If the service is ever exposed beyond the tailnet, put it behind a correctly
-configured HTTPS reverse proxy and update Nextcloud's trusted proxy and
-overwrite settings.
+The cleartext HTTP backend binds only to loopback. Tailscale Serve is the
+tailnet-only reverse proxy and TLS endpoint; Nextcloud's trusted-domain,
+trusted-proxy, and overwrite settings describe the resulting HTTPS URL. If the
+service is ever exposed beyond the tailnet, use a separately reviewed public
+reverse proxy rather than Tailscale Funnel.
 
 ## Shutdown sequence
 
