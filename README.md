@@ -94,12 +94,13 @@ commands. The Compose arrangement follows the
 [official Nextcloud image guidance](https://github.com/nextcloud/docker) and
 the [Memories recommendation for an external Docker transcoder](https://memories.gallery/hw-transcoding/).
 
-## Graceful shutdown
+## Host lifecycle
 
 All stateful and working services have explicit stop grace periods. The
-optional Ansible role installs a systemd guard that runs `docker compose stop`
-before Docker stops and raises Docker's host-level timeout to 20 minutes. It
-does not start Compose, restart Docker, install drivers, or change Tailscale.
+optional Ansible role installs a systemd service that runs `docker compose up
+--detach` after Docker starts and `docker compose stop` before Docker stops. It
+also raises Docker's host-level timeout to 20 minutes. It does not restart
+Docker, install drivers, or change Tailscale.
 
 ## Secret hygiene
 

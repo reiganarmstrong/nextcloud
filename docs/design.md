@@ -37,10 +37,11 @@ trusted-proxy, and overwrite settings describe the resulting HTTPS URL. If the
 service is ever exposed beyond the tailnet, use a separately reviewed public
 reverse proxy rather than Tailscale Funnel.
 
-## Shutdown sequence
+## Host lifecycle
 
-The systemd guard is active but does no work at startup. When Docker or the host
-stops, reverse ordering stops the guard first. Its `ExecStop` asks Compose to
-stop the stack, Compose observes service grace periods, and only then does
-Docker stop. Docker's own 20-minute systemd deadline remains longer than the
-guard and every individual service deadline.
+The systemd service starts after Docker and runs `docker compose up --detach`,
+so a stack explicitly stopped during the previous shutdown is restored at
+boot. When Docker or the host stops, reverse ordering stops the service first.
+Its `ExecStop` asks Compose to stop the stack, Compose observes service grace
+periods, and only then does Docker stop. Docker's own 20-minute systemd
+deadline remains longer than the service and every individual service deadline.

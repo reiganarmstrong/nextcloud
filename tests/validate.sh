@@ -18,6 +18,16 @@ POSTGRES_PASSWORD_FILE=./secrets/postgres_password.example \
 NEXTCLOUD_ADMIN_PASSWORD_FILE=./secrets/nextcloud_admin_password.example \
   docker compose --env-file .env.example config --quiet
 
+grep -Fq \
+  'ExecStart=/usr/bin/docker compose --project-directory {{ nextcloud_host_compose_dir }} up --detach' \
+  ansible/roles/nextcloud_host/templates/nextcloud-shutdown.service.j2
+grep -Fq \
+  'TimeoutStartSec={{ nextcloud_host_guard_timeout }}' \
+  ansible/roles/nextcloud_host/templates/nextcloud-shutdown.service.j2
+grep -Fq \
+  'ExecStop=/usr/bin/docker compose --project-directory {{ nextcloud_host_compose_dir }} stop' \
+  ansible/roles/nextcloud_host/templates/nextcloud-shutdown.service.j2
+
 if command -v ansible-playbook >/dev/null 2>&1; then
   (
     cd ansible

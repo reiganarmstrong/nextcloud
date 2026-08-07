@@ -2,7 +2,7 @@
 
 This small role is justified because Compose cannot control systemd's Docker
 shutdown deadline or guarantee that this stack is stopped before Docker. It
-does **not** install Docker, start Compose, alter Tailscale, or manage secrets.
+does **not** install Docker, alter Tailscale, or manage secrets.
 
 The role:
 
@@ -10,8 +10,8 @@ The role:
   `/dev/dri/renderD128`;
 - creates the ignored runtime directories;
 - gives Docker 20 minutes to stop all host containers cleanly; and
-- installs and arms a oneshot guard whose only shutdown action is
-  `docker compose stop`. Starting the guard does not start any container.
+- installs and enables a oneshot lifecycle service that runs `docker compose
+  up --detach` at boot and `docker compose stop` before Docker stops.
 
 Prepare local files:
 

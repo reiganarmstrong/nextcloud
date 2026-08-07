@@ -43,10 +43,11 @@ Tailscale Serve.
 The data path is fixed after first installation. Do not change
 `NEXTCLOUD_DATA_LOCATION` later without a planned migration.
 
-## 3. Optional host shutdown preparation
+## 3. Optional host lifecycle preparation
 
-Follow [`../ansible/README.md`](../ansible/README.md). The role performs no
-Compose deployment. Check mode is the right first run.
+Follow [`../ansible/README.md`](../ansible/README.md). The role starts the
+Compose project when applied and on future boots. Check mode is the right first
+run.
 
 ## 4. Start and verify
 
@@ -99,7 +100,7 @@ docker compose stop
 Do not use `docker compose down -v`; this stack uses bind mounts, but deleting
 volumes by habit is still an unsafe operational pattern. The systemd shutdown
 guard uses `stop`, not `down`, and respects each service's declared grace
-period.
+period. The lifecycle service starts the stopped stack again on the next boot.
 
 ## Scope
 
