@@ -8,7 +8,8 @@ The role:
 
 - requires a Debian-family systemd host, Docker Compose, `compose.yaml`, and
   `/dev/dri/renderD128`;
-- creates the ignored runtime directories;
+- creates missing ignored runtime directories without changing ownership or
+  permissions on initialized container data;
 - gives Docker 20 minutes to stop all host containers cleanly; and
 - installs and enables a oneshot lifecycle service that runs `docker compose
   up --detach` at boot and `docker compose stop` before Docker stops.
