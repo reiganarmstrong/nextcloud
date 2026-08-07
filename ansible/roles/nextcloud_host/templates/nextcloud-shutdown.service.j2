@@ -1,5 +1,5 @@
 [Unit]
-Description=Gracefully stop the Nextcloud Compose stack before Docker
+Description=Manage the Nextcloud Compose stack across the host lifecycle
 Requires=docker.service
 After=docker.service network-online.target
 PartOf=docker.service
@@ -7,7 +7,8 @@ PartOf=docker.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/bin/true
+ExecStart=/usr/bin/docker compose --project-directory {{ nextcloud_host_compose_dir }} up --detach
+TimeoutStartSec={{ nextcloud_host_guard_timeout }}
 ExecStop=/usr/bin/docker compose --project-directory {{ nextcloud_host_compose_dir }} stop
 TimeoutStopSec={{ nextcloud_host_guard_timeout }}
 

@@ -121,6 +121,7 @@ services:
   cron:
     <<: *nextcloud-common
     entrypoint: /cron.sh
+    stop_signal: SIGTERM
     depends_on:
       app:
         condition: service_healthy
